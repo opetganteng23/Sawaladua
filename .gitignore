@@ -5,3 +5,21 @@ dist
 logs
 e2e/.results
 server/eval/reports
+
+# Semua varian .env adalah rahasia; hanya contoh (*.example) yang boleh di-commit
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!.env.staging.example
+!**/.env.example
+!**/.env.staging.example
+
+# Artefak uji dan sementara
+playwright-report
+test-results
+coverage
+*.tmp.*
+*.pem
+*.key
+.DS_Store
