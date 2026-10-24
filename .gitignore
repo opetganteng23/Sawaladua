@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+*.log
+logs
+e2e/.results
+server/eval/reports

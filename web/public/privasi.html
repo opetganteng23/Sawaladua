@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kebijakan Privasi Sawala (DRAF)</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f6f1ea; --fg:#2b2420; --muted:#6a5d54; --warn:#fff3cd; --warnfg:#5c4400; --border:#d9cdbd; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#16181d; --fg:#eceff4; --muted:#a4acba; --warn:#3a3000; --warnfg:#ffe28a; --border:#383e49; } }
+  body { background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, sans-serif; margin: 0; padding: 24px 16px; }
+  main { max-width: 760px; margin: 0 auto; }
+  h1, h2 { line-height: 1.25; }
+  .draft { background: var(--warn); color: var(--warnfg); border: 1px solid var(--border); padding: 12px 16px; border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+<p><a href="/">&larr; Kembali ke Sawala</a></p>
+<h1>Kebijakan Privasi Sawala</h1>
+<p class="draft"><strong>DRAF, belum ditinjau ahli hukum.</strong> Dokumen ini disusun dari perilaku teknis aplikasi saat ini. Sebelum dibuka ke pengguna, pemilik layanan wajib melengkapi bagian bertanda [ ... ] dan meminta tinjauan hukum (termasuk kepatuhan UU Pelindungan Data Pribadi). Dokumen ini bukan nasihat hukum.</p>
+
+<h2>1. Siapa kami</h2>
+<p>Sawala dioperasikan oleh [NAMA BADAN/PEMILIK LAYANAN], [ALAMAT]. Kontak pelindungan data: [EMAIL KONTAK].</p>
+
+<h2>2. Sawala adalah AI</h2>
+<p>Sawala adalah teman ngobrol berbasis AI. Sawala bukan psikolog, dokter, konselor, atau layanan darurat, dan tidak mendiagnosis. Jika kamu dalam bahaya, hubungi layanan darurat setempat atau orang tepercaya.</p>
+
+<h2>3. Data apa yang kami proses dan untuk apa</h2>
+<table>
+<tr><th>Data</th><th>Tujuan</th><th>Disimpan sampai</th></tr>
+<tr><td>Email, nama tampilan, ID akun dari Google</td><td>Masuk dan mengenali akunmu</td><td>Sampai akun dihapus</td></tr>
+<tr><td>Isi percakapan (teks)</td><td>Menampilkan riwayat dan menjawab dengan konteks</td><td>Sampai kamu menghapusnya. Jika &quot;Simpan riwayat&quot; dimatikan: dihapus otomatis setelah 24 jam tidak aktif</td></tr>
+<tr><td>Memori jangka panjang (ringkasan fakta/kejadian yang kamu ceritakan)</td><td>Menjaga obrolan nyambung. Hanya jika kamu mengaktifkannya</td><td>Sampai kamu menghapusnya atau menghapus akun</td></tr>
+<tr><td>Ringkasan sesi</td><td>Kesinambungan antar sesi (hanya jika memori aktif)</td><td>Sampai percakapan/akun dihapus</td></tr>
+<tr><td>Preferensi (tema, gaya bicara, sapaan, privasi)</td><td>Personalisasi</td><td>Sampai akun dihapus</td></tr>
+<tr><td>Metrik teknis (waktu, jumlah token, status, tanpa isi percakapan)</td><td>Keandalan dan pengendalian biaya</td><td>90 hari</td></tr>
+<tr><td>Daftar sesi login (waktu masuk dan jenis browser/perangkat, dipotong)</td><td>Menampilkan dan mencabut sesi di Pengaturan, keamanan akun</td><td>Sampai sesi berakhir (maks. 14 hari) atau akun dihapus</td></tr>
+<tr><td>Metadata panggilan suara (waktu mulai/akhir, jumlah giliran)</td><td>Operasional fitur suara</td><td>Sampai akun dihapus</td></tr>
+</table>
+<p>Hal sensitif (mis. kesehatan, keyakinan) <strong>tidak disimpan sebagai memori</strong> kecuali kamu mengizinkannya secara terpisah di Pengaturan. Detail yang berkaitan dengan krisis tidak disimpan sebagai memori jangka panjang.</p>
+
+<h2>4. Pihak ketiga yang menerima data</h2>
+<ul>
+<li><strong>Google</strong> (login). Kami menerima email, nama, dan ID akun.</li>
+<li><strong>Penyedia model AI</strong>: [NAMA PENYEDIA]. Pesan dan konteks yang diperlukan (pesan terbaru, ringkasan, memori yang relevan, preferensi gaya) dikirim untuk menghasilkan balasan dan ekstraksi memori. [Cantumkan: apakah data dipakai untuk pelatihan, masa retensi, lokasi pemrosesan, setelah diverifikasi dari ketentuan resmi paket yang dipakai.]</li>
+<li><strong>Penyedia database/hosting</strong>: [MongoDB Atlas, Biznet Gio, wilayah/region].</li>
+</ul>
+<p>Kami tidak menjual datamu dan tidak memakainya untuk iklan.</p>
+
+<h2>5. Panggilan suara</h2>
+<ul>
+<li><strong>Mode realtime</strong> (jika diaktifkan): suaramu dikirim ke server Sawala lalu diteruskan ke penyedia AI untuk diproses secara realtime ([NAMA PENYEDIA SUARA/MODEL]). Sawala <strong>tidak menyimpan audio</strong>; audio hanya diproses di memori. Penyedia AI memprosesnya sesuai ketentuan mereka ([cantumkan retensi dan penggunaan data setelah diverifikasi]).</li>
+<li><strong>Mode browser</strong> (cadangan): pengenalan suara dan suara Sawala dijalankan browser/perangkatmu. Tergantung browser, audio bisa dikirim ke layanan pengenalan suara pembuat browser; server Sawala tidak menerima audio, hanya teks transkripsi.</li>
+<li>Tanpa persetujuanmu menyimpan transkrip, teks dipakai sementara selama panggilan dan dihapus saat panggilan berakhir.</li>
+<li>Selama panggilan, pemeriksaan keselamatan berjalan terus. Bila ada tanda bahaya, Sawala dapat menghentikan jawabannya dan mengambil jalur yang lebih hati-hati.</li>
+</ul>
+
+<h2>6. Hakmu dan cara menggunakannya</h2>
+<ul>
+<li><strong>Melihat, mengubah, menghapus memori</strong>: panel Memori.</li>
+<li><strong>Menghapus percakapan</strong>: tombol hapus pada daftar riwayat.</li>
+<li><strong>Mengekspor data</strong>: Pengaturan &gt; Data &gt; Ekspor (JSON).</li>
+<li><strong>Menghapus akun dan seluruh data aktif</strong>: Pengaturan &gt; Data &gt; Hapus akun. Statusnya dapat dipantau sampai selesai.</li>
+<li>Permintaan lain terkait data pribadi: [EMAIL KONTAK].</li>
+</ul>
+
+<h2>7. Tentang penghapusan, backup, dan pihak ketiga</h2>
+<p>Penghapusan menghapus data aktif dari database utama. Salinan di <strong>backup</strong> dihapus mengikuti siklus retensi backup ([JUMLAH HARI]), dan data di sistem pihak ketiga mengikuti kebijakan mereka. Karena itu, data tidak langsung hilang di semua tempat pada saat yang sama; kami akan menyatakan status penghapusan secara jujur.</p>
+
+<h2>8. Keamanan</h2>
+<p>Komunikasi memakai HTTPS. Kunci layanan hanya berada di server. Akses data dibatasi pada pemilik akun. Isi percakapan tidak dicatat di log operasional. Tidak ada sistem yang sepenuhnya bebas risiko; jika terjadi insiden yang memengaruhi datamu, kami akan memberitahu sesuai kewajiban hukum.</p>
+
+<h2>9. Usia</h2>
+<p>Sawala ditujukan bagi pengguna berusia 18 tahun ke atas.</p>
+
+<h2>10. Perubahan</h2>
+<p>Perubahan material akan diberitahukan di aplikasi. Versi: DRAF 0.1 &mdash; [TANGGAL].</p>
+</main>
+</body>
+</html>

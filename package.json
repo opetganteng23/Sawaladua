@@ -1,0 +1,31 @@
+{
+  "name": "sawala",
+  "private": true,
+  "version": "0.2.0",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev:server": "npm -w server run dev",
+    "dev:web": "npm -w web run dev",
+    "build": "npm -w web run build && npm -w server run build",
+    "start": "npm -w server run start",
+    "test": "npm -w server test && npm -w web test",
+    "test:e2e": "npm run build && playwright test",
+    "typecheck": "npm -w server run typecheck && npm -w web run typecheck",
+    "pm2:start": "pm2 startOrReload ecosystem.config.cjs --env production",
+    "pm2:stop": "pm2 stop sawala",
+    "pm2:logs": "pm2 logs sawala",
+    "db:migrate": "npm -w server run db:migrate",
+    "db:vector-index": "npm -w server run db:vector-index",
+    "db:reembed": "npm -w server run db:reembed",
+    "scan:secrets": "node scripts/scan-secrets.mjs",
+    "eval:safety": "npm -w server run eval:safety",
+    "voice:smoke": "npm -w server run voice:smoke --"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1"
+  }
+}

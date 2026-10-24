@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: Sawala API
+  version: 0.5.0
+  description: |
+    Kontrak API Sawala. Seluruh endpoint privat memakai cookie sesi `sawala_sid` (httpOnly) dan WAJIB mengirim header
+    `X-Requested-With: sawala` pada permintaan non-GET (perlindungan CSRF) dari origin yang ada di `ALLOWED_ORIGINS`.
+    `userId` tidak pernah diterima dari klien; identitas selalu berasal dari sesi server. Field yang tidak dikenal ditolak (400).
+    Berkas ini diuji terhadap rute yang benar-benar terdaftar (`server/test/ops.test.ts`).
+servers:
+  - url: /
+tags:
+  - { name: auth }
+  - { name: chat }
+  - { name: memory }
+  - { name: account }
+  - { name: voice }
+  - { name: admin }
+security:
+  - cookieAuth: []
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean } } } } } }
+  /api/auth/session:
+    get:
+      tags: [auth]
+      summary: Status sesi, flag fitur efektif, dan metode login yang tersedia
+      security: []
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/SessionInfo" } } } }
+  /api/auth/google:
+    post:
+      tags: [auth]
+      summary: Login dengan Google ID token (Google Identity Services)
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [credential], properties: { credential: { type: string } }, additionalProperties: false } } } }
+      responses:
+        "200": { description: Sesi dibuat (cookie diset), content: { application/json: { schema: { type: object, properties: { user: { $ref: "#/components/schemas/User" } } } } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "503": { $ref: "#/components/responses/Error" }
+  /api/auth/dev:
+    post:
+      tags: [auth]
+      summary: Login pengembangan (hanya jika AUTH_DEV_LOGIN=true; ditolak di staging/production)
+      security: []
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string, format: email }, displayName: { type: string } }, additionalProperties: false } } } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/auth/logout:
+    post:
+      tags: [auth]
+      summary: Akhiri sesi
+      security: []
+      responses:
+        "200": { description: OK }
+  /api/conversations:
+    get:
+      tags: [chat]
+      summary: Daftar percakapan (paginasi `before`)
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 30 } }
+        - { name: before, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: "#/components/schemas/Conversation" } }, nextBefore: { type: string, nullable: true } } } } } }
+        "401": { $ref: "#/components/responses/Error" }
+    post:
+      tags: [chat]
+      summary: Buat percakapan kosong
+      requestBody: { content: { application/json: { schema: { type: object, properties: { title: { type: string, maxLength: 80 } }, additionalProperties: false } } } }
+      responses:
+        "201": { description: Dibuat }
+  /api/conversations/{id}/messages:
+    get:
+      tags: [chat]
+      summary: Pesan dalam percakapan milik pengguna (paginasi `before`)
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 30 } }
+        - { name: before, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: "#/components/schemas/Message" } }, nextBefore: { type: string, nullable: true } } } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/conversations/{id}:
+    delete:
+      tags: [chat]
+      summary: Hapus percakapan beserta pesan dan ringkasannya
+      parameters:
+        - { $ref: "#/components/parameters/Id" }
+        - { name: deleteMemories, in: query, description: Hapus juga memori yang seluruh sumbernya dari percakapan ini, schema: { type: boolean } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/chat:
+    post:
+      tags: [chat]
+      summary: Kirim pesan dan terima balasan sebagai Server-Sent Events
+      description: |
+        Respons `text/event-stream`. Urutan event: `message_started`, lalu per bubble `bubble_started` / `bubble_delta`* / `bubble_completed`,
+        lalu `mood_updated` (jika indikator mood aktif) dan `message_completed`; atau `error` {code,userMessage,retryable,requestId}.
+        Balasan dialirkan setelah divalidasi (schema + keselamatan). `clientMessageId` yang sama memutar ulang balasan (idempoten).
+        Error sebelum stream dimulai berupa JSON biasa: 400 INVALID_REQUEST, 403 AGE_CONFIRMATION_REQUIRED, 404, 413 MESSAGE_TOO_LONG, 429 DAILY_LIMIT/RATE_LIMITED.
+        Kode `error` di dalam stream: PROVIDER_UNAVAILABLE (retryable), QUOTA_EXHAUSTED (tidak retryable).
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ChatRequest" } } } }
+      responses:
+        "200": { description: SSE stream, content: { text/event-stream: { schema: { type: string } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "410": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /api/memories:
+    get:
+      tags: [memory]
+      summary: Daftar memori milik pengguna (tanpa embedding)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [active, conflict, flagged_wrong, superseded, all], default: all } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: "#/components/schemas/Memory" } }, enabled: { type: boolean } } } } } }
+  /api/memories/{id}:
+    get:
+      tags: [memory]
+      summary: Detail memori beserta kutipan sumbernya
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      tags: [memory]
+      summary: Ubah isi, tandai salah/tidak, konfirmasi, atau selesaikan konflik
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                content: { type: string, minLength: 3, maxLength: 300 }
+                action: { type: string, enum: [flag_wrong, unflag, confirm, resolve] }
+                keep: { type: string, enum: [this, other], description: Wajib untuk action=resolve }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [memory]
+      summary: Hapus satu memori (embedding ikut terhapus)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/memories/forget:
+    post:
+      tags: [memory]
+      summary: Dua langkah. `query` mencari kandidat; `ids` menghapus yang dikonfirmasi pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: object, required: [query], properties: { query: { type: string } }, additionalProperties: false }
+                - { type: object, required: [ids], properties: { ids: { type: array, items: { type: string } } }, additionalProperties: false }
+      responses:
+        "200": { description: OK }
+  /api/settings:
+    get:
+      tags: [account]
+      summary: Preferensi dan pengaturan privasi
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/User" } } } }
+    patch:
+      tags: [account]
+      summary: Ubah pengaturan (strict). `ageConfirmed` hanya boleh `true`
+      requestBody: { required: true, content: { application/json: { schema: { type: object, description: "Lihat server/src/routes/account.ts (settingsBody)" } } } }
+      responses:
+        "200": { description: OK }
+        "400": { $ref: "#/components/responses/Error" }
+  /api/search:
+    get:
+      tags: [account]
+      summary: Cari percakapan (teks) dan opsional kecocokan makna pada ringkasan sesi
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 2, maxLength: 100 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 30 } }
+        - { name: semantic, in: query, description: "Isi 1 untuk pencarian makna (butuh memori aktif)", schema: { type: string, enum: ["1"] } }
+      responses:
+        "200": { description: OK }
+  /api/greeting:
+    get:
+      tags: [account]
+      summary: Sapaan opsional (maksimal sekali per ~20 jam, di luar jam tenang). `greeting` null jika tidak ada
+      responses:
+        "200": { description: OK }
+  /api/mood:
+    get:
+      tags: [account]
+      summary: Mood terakhir
+      responses:
+        "200": { description: OK }
+  /api/data/export:
+    post:
+      tags: [account]
+      summary: Ekspor data pengguna sebagai JSON (dialirkan per dokumen)
+      responses:
+        "200": { description: Berkas JSON, content: { application/json: { schema: { type: object } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/me:
+    delete:
+      tags: [account]
+      summary: Mulai penghapusan akun dan data (workflow berstatus, berjalan di latar belakang)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [confirm], properties: { confirm: { type: string, enum: [HAPUS] } }, additionalProperties: false } } } }
+      responses:
+        "202": { description: Diterima. Berisi `statusToken` untuk memantau lewat /api/deletion-status }
+        "400": { $ref: "#/components/responses/Error" }
+  /api/deletion-status:
+    get:
+      tags: [account]
+      summary: Status workflow penghapusan (tanpa sesi, memakai token dari DELETE /api/me)
+      security: []
+      parameters:
+        - { name: token, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/sessions:
+    get:
+      tags: [account]
+      summary: Daftar sesi login aktif pengguna (ID publik 12 karakter, bukan token)
+      responses:
+        "200": { description: OK }
+  /api/sessions/{id}:
+    delete:
+      tags: [account]
+      summary: Cabut satu sesi milik sendiri
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, pattern: "^[a-f0-9]{12}$" } }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/sessions/revoke-others:
+    post:
+      tags: [account]
+      summary: Cabut semua sesi selain yang sedang dipakai
+      responses:
+        "200": { description: OK }
+  /api/calls:
+    post:
+      tags: [voice]
+      summary: Mulai panggilan suara (butuh flag voiceCalls aktif dan konfirmasi usia)
+      description: |
+        `transcriptConsent=false` berarti teks sementara dihapus saat panggilan berakhir. Audio tidak pernah disimpan.
+        Suara realtime memakai WebSocket `/api/calls/{id}/realtime[?bargeIn=1]` (cookie sesi + Origin terdaftar; satu koneksi per pengguna):
+        klien mengirim frame biner PCM16 mono (laju dari pesan `ready`) dan JSON {type: mute|interrupt|end}; server mengirim JSON
+        {ready, state, transcript, interrupted, speak_audio, speak_text, error, ended} dan frame biner PCM16 balasan model.
+        Penolakan handshake: 401 tanpa sesi, 403 Origin/usia, 404 panggilan/fitur, 409 sesi ganda, 503 penuh.
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [transcriptConsent], properties: { transcriptConsent: { type: boolean } }, additionalProperties: false } } } }
+      responses:
+        "201": { description: Dibuat }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/calls/{id}/end:
+    post:
+      tags: [voice]
+      summary: Akhiri panggilan (idempoten)
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { content: { application/json: { schema: { type: object, properties: { avgLatencyMs: { type: number }, clientTurns: { type: integer } }, additionalProperties: false } } } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/admin/usage:
+    get:
+      tags: [admin]
+      summary: Metrik penggunaan agregat (hanya email di ADMIN_EMAILS; selain itu 404)
+      parameters:
+        - { name: days, in: query, schema: { type: integer, minimum: 1, maximum: 90, default: 7 } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/admin/flags:
+    get:
+      tags: [admin]
+      summary: Flag efektif dan kill switch aktif
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      tags: [admin]
+      summary: Set kill switch runtime (hanya bisa mematikan fitur yang menyala di environment)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [killed], properties: { killed: { type: array, items: { type: string, enum: [longTermMemory, moodThemes, proactiveGreeting, voiceCalls, dataExport] } } }, additionalProperties: false } } } }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+components:
+  securitySchemes:
+    cookieAuth: { type: apiKey, in: cookie, name: sawala_sid }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, pattern: "^[a-f0-9]{24}$" } }
+  responses:
+    Error:
+      description: Error dengan format konsisten
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message, retryable]
+          properties: { code: { type: string }, message: { type: string }, retryable: { type: boolean }, requestId: { type: string } }
+    SessionInfo:
+      type: object
+      properties:
+        user: { allOf: [{ $ref: "#/components/schemas/User" }], nullable: true }
+        features: { type: object, additionalProperties: { type: boolean } }
+        auth: { type: object, properties: { google: { type: boolean }, clientId: { type: string, nullable: true }, dev: { type: boolean } } }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        displayName: { type: string }
+        preferences: { type: object }
+        privacySettings: { type: object }
+        onboardingDone: { type: boolean }
+        ageConfirmed: { type: boolean }
+        isAdmin: { type: boolean }
+    Conversation:
+      type: object
+      properties: { id: { type: string }, title: { type: string }, updatedAt: { type: string, format: date-time }, ephemeral: { type: boolean } }
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        role: { type: string, enum: [user, assistant] }
+        text: { type: string }
+        bubbles: { type: array, items: { type: string } }
+        status: { type: string, enum: [complete, incomplete, failed] }
+        mood: { type: string, nullable: true, enum: [hangat, ceria, playful, reflektif] }
+        createdAt: { type: string, format: date-time }
+    Memory:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [episodic, semantic] }
+        content: { type: string }
+        status: { type: string, enum: [active, conflict, flagged_wrong, superseded] }
+        sensitivity: { type: string, enum: [none, personal, sensitive] }
+        userConfirmed: { type: boolean }
+        sourceCount: { type: integer }
+    ChatRequest:
+      type: object
+      required: [clientMessageId, text]
+      additionalProperties: false
+      properties:
+        conversationId: { type: string }
+        clientMessageId: { type: string, minLength: 8, maxLength: 80, description: Kunci idempotensi }
+        text: { type: string, maxLength: 4000 }
+        callId: { type: string, description: ID panggilan aktif (kanal suara) }
