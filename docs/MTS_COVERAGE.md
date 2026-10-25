@@ -39,4 +39,5 @@ Legenda: **Selesai** = terbangun dan teruji otomatis. **Selesai (butuh uji nyata
 | 19 | Risiko dan mitigasi | Selesai | Setiap mitigasi punya kontrol dan tes |
 | 20 | Keputusan terbuka | Sebagian **Anda** | Selesai: usia 18+, stack, login, memori terkendali, ekspor JSON, deployment. Anda: retensi chat/backup, tema visual final, nomor krisis |
 | 21 | Definition of Done | Selesai | Per fitur: validasi server, loading/kosong/sukses/gagal, tes, tanpa secret, log aman, aksesibel, dokumentasi |
+| (di luar MTS) | Dasbor admin | Selesai | Pengguna/undangan/provider/pengaturan situs/kill switch/metrik/audit, CRUD + tabel, peran pemilik vs admin, kunci terenkripsi; [ADMIN.md](ADMIN.md). Uji: 20 tes server, tes UI, E2E desktop+mobile+axe |
 | 22 | Verifikasi sumber | **Anda** | Templat di [VERIFIKASI.md](VERIFIKASI.md) |

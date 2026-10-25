@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, streamChat, type Conversation, type Features, type Mood, type Msg, type SearchHit, type SimilarHit, type User } from "../api";
+import { api, streamChat, type Conversation, type Features, type Mood, type Msg, type SearchHit, type SimilarHit, type SiteInfo, type User } from "../api";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { MemoryPanel } from "./MemoryPanel";
 import { SettingsPanel } from "./SettingsPanel";
@@ -15,8 +15,8 @@ import { StatusMessage } from "./chat/StatusMessage";
 
 interface Pending { clientMessageId: string; text: string; conversationId?: string }
 
-export function Chat({ user, features, onUser, onMood, onLogout, onDeleted }: {
-  user: User; features: Features; onUser: (u: User) => void; onMood: (m: Mood) => void; onLogout: () => void; onDeleted: (token: string) => void;
+export function Chat({ user, features, site, onUser, onMood, onLogout, onDeleted }: {
+  user: User; features: Features; site?: SiteInfo; onUser: (u: User) => void; onMood: (m: Mood) => void; onLogout: () => void; onDeleted: (token: string) => void;
 }) {
   const [convs, setConvs] = useState<Conversation[]>([]);
   const [active, setActive] = useState<string | null>(null);
@@ -134,7 +134,7 @@ export function Chat({ user, features, onUser, onMood, onLogout, onDeleted }: {
   return (
     <AppShell>
       <ConversationSidebar
-        open={sidebar} user={user} features={features} convs={convs} active={active} hasMore={Boolean(convNext)} q={q} hits={hits} similar={similar}
+        siteName={site?.name} open={sidebar} user={user} features={features} convs={convs} active={active} hasMore={Boolean(convNext)} q={q} hits={hits} similar={similar}
         onClose={() => setSidebar(false)} onNew={() => open(null)} onOpen={open} onDelete={setDelConv} onMore={moreConvs}
         onQuery={(v) => { setQ(v); if (!v) { setHits(null); setSimilar([]); } }} onSearch={search}
         onCall={() => showPanel("call")} onMemory={() => showPanel("memory")} onSettings={() => showPanel("settings")} onLogout={onLogout}
@@ -144,8 +144,8 @@ export function Chat({ user, features, onUser, onMood, onLogout, onDeleted }: {
         <ChatHeader title={convs.find((c) => c.id === active)?.title ?? "Percakapan baru"} mood={mood} showMood={user.preferences.showMood} onOpenSidebar={() => setSidebar(true)} />
         {greeting && <StatusMessage text={greeting} onClose={() => setGreeting(null)} />}
         {banner && <ErrorBanner text={banner.text} retryable={banner.retry} onRetry={retry} onClose={() => setBanner(null)} />}
-        <MessageList msgs={msgs} live={live} busy={busy} hasOlder={Boolean(msgNext)} onOlder={olderMsgs} />
-        <ChatComposer busy={busy} onSend={submit} />
+        <MessageList msgs={msgs} live={live} busy={busy} hasOlder={Boolean(msgNext)} onOlder={olderMsgs} emptyLines={site?.ui.emptyLines} />
+        <ChatComposer busy={busy} onSend={submit} disclaimer={site?.ui.disclaimer} />
       </section>
 
       {panel === "call" && (features.realtimeVoice

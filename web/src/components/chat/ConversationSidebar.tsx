@@ -2,7 +2,7 @@ import type { Conversation, Features, SearchHit, SimilarHit, User } from "../../
 import { ConversationMenu } from "./ConversationMenu";
 
 interface Props {
-  open: boolean; user: User; features: Features; convs: Conversation[]; active: string | null; hasMore: boolean;
+  siteName?: string; open: boolean; user: User; features: Features; convs: Conversation[]; active: string | null; hasMore: boolean;
   q: string; hits: SearchHit[] | null; similar: SimilarHit[];
   onClose: () => void; onNew: () => void; onOpen: (id: string) => void; onDelete: (c: Conversation) => void; onMore: () => void;
   onQuery: (q: string) => void; onSearch: (e: React.FormEvent) => void;
@@ -13,7 +13,7 @@ export function ConversationSidebar(p: Props) {
   return (
     <nav className={`sidebar ${p.open ? "open" : ""}`} aria-label="Riwayat percakapan">
       <div className="row">
-        <strong style={{ fontSize: "1.2rem" }}>Sawala</strong><span className="spacer" />
+        <strong style={{ fontSize: "1.2rem" }}>{p.siteName ?? "Sawala"}</strong><span className="spacer" />
         <button className="icon-btn menu-btn" aria-label="Tutup riwayat" onClick={p.onClose}>✕</button>
       </div>
       <button className="btn primary" onClick={p.onNew}>+ Percakapan baru</button>

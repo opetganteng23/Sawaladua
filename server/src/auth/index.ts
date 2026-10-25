@@ -4,14 +4,16 @@ import { OAuth2Client } from "google-auth-library";
 import { z } from "zod";
 import type { AppCtx } from "../context.js";
 import { defaultPreferences, defaultPrivacy, type UserDoc } from "../db.js";
+import { adminRoleOf, adminSet } from "../lib/adminAuth.js";
 import { ApiError, wrap } from "../lib/http.js";
 import { featureFlags } from "../features.js";
+import { publicSite } from "../lib/publicSite.js";
 
 export const COOKIE = "sawala_sid";
 const SESSION_DAYS = 14;
 export const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
-export const adminSet = (ctx: AppCtx) => new Set(ctx.cfg.ADMIN_EMAILS.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean));
+export { adminSet };
 
 export function readCookie(req: Request, name: string): string | null {
   const raw = req.headers.cookie;
@@ -32,7 +34,8 @@ export function publicUser(u: UserDoc, adminEmails: Set<string> = new Set()) {
     privacySettings: u.privacySettings,
     onboardingDone: u.onboardingDone,
     ageConfirmed: Boolean(u.ageConfirmedAt),
-    isAdmin: adminEmails.has(u.email.toLowerCase()),
+    isAdmin: adminEmails.has(u.email.toLowerCase()) || u.role === "admin",
+    adminRole: adminEmails.has(u.email.toLowerCase()) ? "owner" : u.role === "admin" ? "admin" : null,
     deletionStatus: u.deletionStatus,
   };
 }
@@ -48,23 +51,40 @@ async function startSession(ctx: AppCtx, req: Request, res: Response, user: User
 async function upsertUser(ctx: AppCtx, p: { provider: "google" | "dev"; sub: string; email: string; name: string }) {
   const email = p.email.trim().toLowerCase();
   const existing = await ctx.d.c.users.findOne({ authProvider: p.provider, providerSub: p.sub });
-  if (existing) return existing;
+  if (existing) {
+    if (existing.status === "suspended") throw new ApiError(403, "ACCOUNT_SUSPENDED", "Akun ini sedang ditangguhkan. Hubungi pengelola.");
+    await ctx.d.c.users.updateOne({ _id: existing._id }, { $set: { lastLoginAt: new Date() } });
+    return existing;
+  }
+  // Pengguna baru: periksa aturan pendaftaran (dapat diubah di Pengaturan Situs).
+  const site = ctx.settings.site();
+  const isOwner = adminSet(ctx).has(email);
+  const invite = await ctx.d.c.invites.findOne({ email });
+  if (!isOwner && !invite) {
+    if (!site.access.registrationOpen) throw new ApiError(403, "REGISTRATION_CLOSED", "Pendaftaran sedang ditutup. Hubungi pengelola untuk diundang.");
+    const domains = site.access.allowedEmailDomains;
+    if (domains.length && !domains.includes(email.split("@")[1] ?? "")) throw new ApiError(403, "EMAIL_DOMAIN_NOT_ALLOWED", "Domain email ini belum diizinkan.");
+  }
   const doc: UserDoc = {
     _id: undefined as never,
     email,
     displayName: p.name.slice(0, 80),
     authProvider: p.provider,
     providerSub: p.sub,
-    preferences: defaultPreferences(),
+    preferences: defaultPreferences(site.defaultTheme),
     privacySettings: defaultPrivacy(),
     onboardingDone: false,
     deletionStatus: "none",
     lastGreetingAt: null,
     createdAt: new Date(),
+    status: "active",
+    role: invite?.role ?? "user",
+    lastLoginAt: new Date(),
   };
   delete (doc as Partial<UserDoc>)._id;
   try {
     const r = await ctx.d.c.users.insertOne(doc);
+    if (invite) await ctx.d.c.invites.updateOne({ _id: invite._id }, { $set: { usedAt: new Date() } });
     return { ...doc, _id: r.insertedId } as UserDoc;
   } catch (e) {
     if ((e as { code?: number }).code === 11000)
@@ -92,7 +112,10 @@ export function loadUser(ctx: AppCtx) {
       const token = readCookie(req, COOKIE);
       if (token) {
         const s = await ctx.d.c.sessions.findOne({ _id: sha(token), expiresAt: { $gt: new Date() } });
-        if (s) req.user = (await ctx.d.c.users.findOne({ _id: s.userId })) ?? undefined;
+        if (s) {
+          const u = (await ctx.d.c.users.findOne({ _id: s.userId })) ?? undefined;
+          if (u && u.status !== "suspended") req.user = u;
+        }
       }
       next();
     } catch (e) {
@@ -118,6 +141,7 @@ export function authRouter(ctx: AppCtx) {
     res.json({
       user: req.user ? publicUser(req.user, adminSet(ctx)) : null,
       features: featureFlags(ctx),
+      site: publicSite(ctx),
       auth: { google: Boolean(google), clientId: ctx.cfg.GOOGLE_CLIENT_ID || null, dev: ctx.cfg.AUTH_DEV_LOGIN },
     });
   });

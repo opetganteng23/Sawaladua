@@ -40,6 +40,11 @@ export interface UserDoc {
   deletionStatus: "none" | "deletion_pending";
   lastGreetingAt: Date | null;
   forgottenHashes?: string[];
+  role?: "user" | "admin"; // pemilik (owner) ditentukan dari ADMIN_EMAILS di env, bukan dari field ini
+  status?: "active" | "suspended"; // kosong = active
+  suspendedAt?: Date | null;
+  lastLoginAt?: Date | null;
+  adminNote?: string; // catatan internal singkat; JANGAN berisi isi percakapan
   createdAt: Date;
 }
 
@@ -178,6 +183,25 @@ export interface MigrationDoc {
   appliedAt: Date;
 }
 
+export interface InviteDoc {
+  _id: ObjectId;
+  email: string; // huruf kecil, unik
+  role: "user" | "admin";
+  createdBy: string; // email admin
+  createdAt: Date;
+  usedAt?: Date | null;
+}
+
+export interface AuditDoc {
+  _id: ObjectId;
+  at: Date;
+  actor: string; // email admin
+  action: string; // mis. user.suspend, settings.update
+  target?: string; // mis. email pengguna / bagian pengaturan
+  detail?: Record<string, unknown>; // TIDAK boleh memuat rahasia atau isi percakapan
+  ip?: string;
+}
+
 export interface Collections {
   users: Collection<UserDoc>;
   sessions: Collection<SessionDoc>;
@@ -193,6 +217,8 @@ export interface Collections {
   app_settings: Collection<AppSettingDoc>;
   migrations: Collection<MigrationDoc>;
   ops_events: Collection<OpsEventDoc>;
+  invites: Collection<InviteDoc>;
+  audit_log: Collection<AuditDoc>;
 }
 
 export interface Database {
@@ -220,6 +246,8 @@ export async function connectDb(uri: string, name: string): Promise<Database> {
     app_settings: db.collection("app_settings"),
     migrations: db.collection("migrations"),
     ops_events: db.collection("ops_events"),
+    invites: db.collection("invites"),
+    audit_log: db.collection("audit_log"),
   };
   await Promise.all([
     c.users.createIndex({ email: 1 }, { unique: true }),
@@ -238,6 +266,11 @@ export async function connectDb(uri: string, name: string): Promise<Database> {
     c.rate_limits.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     c.ops_events.createIndex({ at: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 }),
     c.ops_events.createIndex({ type: 1, at: -1 }),
+    c.invites.createIndex({ email: 1 }, { unique: true }),
+    c.audit_log.createIndex({ at: -1 }),
+    c.audit_log.createIndex({ action: 1, at: -1 }),
+    c.audit_log.createIndex({ at: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 365 }),
+    c.users.createIndex({ createdAt: -1 }),
     c.call_sessions.createIndex({ userId: 1, status: 1 }),
     c.call_sessions.createIndex({ status: 1, lastActivityAt: 1 }),
     c.deletion_jobs.createIndex({ userId: 1, requestedAt: -1 }),
@@ -252,8 +285,8 @@ export async function connectDb(uri: string, name: string): Promise<Database> {
 
 export const oid = (s: string): ObjectId | null => (ObjectId.isValid(s) && String(new ObjectId(s)) === s ? new ObjectId(s) : null);
 
-export const defaultPreferences = (): Preferences => ({
-  theme: "terang",
+export const defaultPreferences = (theme: Theme = "terang"): Preferences => ({
+  theme,
   moodThemes: false,
   showMood: true,
   style: { length: "ringkas", formality: "santai", emoji: "sedikit", humor: true, addressAs: "" },

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type Mood, type SessionInfo, type User } from "./api";
-import { AdminView } from "./components/AdminView";
+import { AdminApp } from "./admin/AdminApp";
 import { Chat } from "./components/Chat";
 import { Login } from "./components/Login";
 import { Onboarding } from "./components/Onboarding";
@@ -21,6 +21,7 @@ export function App() {
     } catch (e) { setError((e as Error).message); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { if (info?.site?.name) document.title = info.site.name; }, [info?.site?.name]);
 
   // Tema & mood diterapkan lewat atribut data (token CSS), bukan warna hard-coded di komponen.
   useEffect(() => {
@@ -59,13 +60,23 @@ export function App() {
   if (error && !info) return <main className="center"><div className="card stack" role="alert"><h1>Sawala</h1><p>{error}</p><button className="btn primary" onClick={refresh}>Coba lagi</button></div></main>;
   if (!info) return <main className="center"><p role="status">Memuat…</p></main>;
   if (!user) return <Login info={info} onLogin={(u) => setUser(u)} />;
+  if (info.site?.maintenance.enabled && !user.isAdmin) {
+    return (
+      <main className="center"><div className="card stack" role="status">
+        <h1>{info.site.name}</h1>
+        <p>{info.site.maintenance.message}</p>
+        {info.site.supportEmail && <p className="muted">Bantuan: <a href={`mailto:${info.site.supportEmail}`}>{info.site.supportEmail}</a></p>}
+        <button className="btn" onClick={() => void refresh()}>Coba lagi</button>
+      </div></main>
+    );
+  }
   if (!user.onboardingDone || !user.ageConfirmed) return <Onboarding user={user} features={info.features} onDone={setUser} />;
 
-  if (user.isAdmin && window.location.pathname === "/admin") return <AdminView />;
+  if (user.isAdmin && /^\/admin(\/|$)/.test(window.location.pathname)) return <AdminApp user={user} siteName={info.site?.name ?? "Sawala"} />;
 
   return (
     <Chat
-      user={user} features={info.features} onUser={setUser} onMood={setMood}
+      user={user} features={info.features} site={info.site} onUser={setUser} onMood={setMood}
       onLogout={async () => { await api("POST", "/api/auth/logout").catch(() => undefined); setUser(null); setMood("hangat"); }}
       onDeleted={(token) => { setUser(null); setDeletion({ token, view: null }); }}
     />

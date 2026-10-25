@@ -12,6 +12,12 @@ import { ApiError, errorHandler, sendError } from "./lib/http.js";
 import { rateLimit } from "./lib/ratelimit.js";
 import { accountRouter, deletionStatusRouter } from "./routes/account.js";
 import { adminRouter } from "./routes/admin.js";
+import { adminAuditRouter } from "./routes/adminAudit.js";
+import { adminProvidersRouter } from "./routes/adminProviders.js";
+import { adminSettingsRouter } from "./routes/adminSettings.js";
+import { adminUsersRouter } from "./routes/adminUsers.js";
+import { adminRoleOf } from "./lib/adminAuth.js";
+import { legalHtml, publicSite } from "./lib/publicSite.js";
 import { callsRouter } from "./routes/calls.js";
 import { conversationsRouter } from "./routes/conversations.js";
 import { memoriesRouter } from "./routes/memories.js";
@@ -71,6 +77,14 @@ export function createApp(ctx: AppCtx) {
   api.use(ipLimit, csrfGuard(ctx), loadUser(ctx));
   api.use("/auth", authLimit, authRouter(ctx));
   api.use(deletionStatusRouter(ctx));
+  api.get("/site", (_req, res) => res.json(publicSite(ctx))); // pengaturan situs publik (tanpa rahasia)
+  // Mode pemeliharaan (Pengaturan Situs): selain admin, API privat menjawab 503 yang jujur dan bisa dicoba lagi.
+  api.use((req, res, next) => {
+    const m = ctx.settings.site().access.maintenance;
+    if (!m.enabled || /^\/(auth|admin|site|deletion-status)(\/|$)/.test(req.path)) return next();
+    if (req.user && adminRoleOf(ctx, req.user)) return next();
+    sendError(res, 503, "MAINTENANCE", m.message, true);
+  });
   api.use(requireAuth());
   api.post("/chat", chatLimit);
   api.post("/data/export", exportLimit);
@@ -78,10 +92,24 @@ export function createApp(ctx: AppCtx) {
   api.use(callsRouter(ctx));
   api.use(sessionsRouter(ctx));
   api.use(adminRouter(ctx));
+  api.use(adminUsersRouter(ctx));
+  api.use(adminSettingsRouter(ctx));
+  api.use(adminProvidersRouter(ctx));
+  api.use(adminAuditRouter(ctx));
   api.use(memoriesRouter(ctx));
   api.use(accountRouter(ctx));
   api.use((_req, res) => sendError(res, 404, "NOT_FOUND", "Tidak ditemukan."));
   app.use("/api", api);
+
+  // Halaman hukum buatan admin (Pengaturan Situs); jika kosong, jatuh ke halaman bawaan di web/public.
+  const legal = (file: "privasi" | "ketentuan") => (_req: Request, res: Response, next: NextFunction) => {
+    const s = ctx.settings.site();
+    const text = file === "privasi" ? s.legal.privacy : s.legal.terms;
+    if (!text) return next();
+    res.set("Cache-Control", "no-cache").type("html").send(legalHtml(s.name, file === "privasi" ? "Kebijakan Privasi" : "Ketentuan Penggunaan", text));
+  };
+  app.get("/privasi.html", legal("privasi"));
+  app.get("/ketentuan.html", legal("ketentuan"));
 
   // Satu proses: API + PWA hasil build (web/dist). Aktif otomatis jika folder build ada.
   const here = path.dirname(fileURLToPath(import.meta.url));

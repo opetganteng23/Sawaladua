@@ -6,6 +6,7 @@ Semua kode, uji, dan dokumen yang bisa dikerjakan tanpa data Anda sudah selesai.
 - [ ] **Google OAuth**: buat OAuth client ID (Web), isi `GOOGLE_CLIENT_ID`, tambahkan domain ke Authorized JavaScript origins.
 - [ ] **Penyedia AI** (pilih per kemampuan, lihat [PROVIDERS.md](PROVIDERS.md)): `LLM_PROVIDER` + kunci + nama model; `EMBEDDING_PROVIDER` + model + `EMBEDDING_DIMENSIONS`; opsional `STT_PROVIDER`/`TTS_PROVIDER`/`REALTIME_PROVIDER` + modelnya.
 - [ ] **MongoDB Atlas**: `MONGODB_URI` (IP server saja di allowlist), lalu `npm run db:vector-index` bila memakai Vector Search (`VECTOR_SEARCH_INDEX`).
+- [ ] `SETTINGS_ENCRYPTION_KEY` (`openssl rand -base64 32`) supaya kunci API bisa dikelola dari `/admin/providers`; **cadangkan terpisah dari database**. Setelah itu kunci Gemini/OpenAI/Anthropic dan pemilihan model bisa diisi lewat dasbor ([ADMIN.md](ADMIN.md)), tidak perlu mengedit `.env`.
 - [ ] `SESSION_SECRET` acak (`openssl rand -base64 48`), `ALLOWED_ORIGINS` = origin publik persis.
 - [ ] `ADMIN_EMAILS` (akses `/admin`), `ALERT_WEBHOOK_URL` (https), `DAILY_TOKEN_BUDGET_*`, `COST_PER_1M_*` dari harga resmi.
 

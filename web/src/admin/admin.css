@@ -1,0 +1,88 @@
+/* Dasbor admin: tata letak rapi (sidebar + konten), tabel, kartu, form. Memakai token tema dari styles.css. */
+.admin { min-height: 100%; background: var(--bg); color: var(--text-primary); }
+.admin * { box-sizing: border-box; }
+.admin .skip { position: absolute; left: -999px; top: 0; background: var(--surface); padding: 8px 12px; z-index: 50; }
+.admin .skip:focus { left: 8px; top: 8px; }
+.admin-top { display: flex; align-items: center; gap: 12px; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+.admin-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); align-items: start; }
+.admin-nav { position: sticky; top: 57px; padding: 16px 12px; border-right: 1px solid var(--border); min-height: calc(100vh - 57px); background: var(--surface); }
+.admin-nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.admin-nav a { display: block; padding: 10px 14px; border-radius: 10px; color: inherit; text-decoration: none; }
+.admin-nav a:hover { background: var(--surface-2); }
+.admin-nav a[aria-current="page"] { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.admin main { padding: 24px 28px 64px; max-width: 1240px; width: 100%; min-width: 0; outline: none; }
+.admin-body > * { min-width: 0; }
+.admin h1 { margin: 0 0 6px; font-size: 1.55rem; }
+.admin h2 { margin: 28px 0 10px; font-size: 1.15rem; }
+.admin h3 { margin: 18px 0 8px; font-size: 1rem; }
+.admin .muted { color: var(--text-secondary); }
+.admin a.btn { text-decoration: none; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin: 14px 0; }
+.toolbar .field { margin: 0; min-width: 160px; flex: 1 1 160px; max-width: 280px; }
+.admin .field { display: grid; gap: 4px; margin: 8px 0; font-weight: 500; }
+.admin .field > label { display: grid; gap: 4px; }
+.admin .field.inline { display: inline-grid; margin: 0; }
+.admin .field input, .admin .field select, .admin .field textarea { font-weight: 400; }
+.admin .field.invalid input, .admin .field.invalid textarea, .admin .field.invalid select { border-color: var(--danger); }
+.admin .field .err { color: var(--danger); }
+.admin small { font-weight: 400; }
+.admin textarea { width: 100%; min-height: 70px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); resize: vertical; }
+
+.card, .card-form { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+.admin fieldset.card { margin: 0 0 18px; min-width: 0; }
+.card-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin: 14px 0; }
+.card-form .field { margin: 0; flex: 1 1 220px; }
+.stack-lg > * + * { margin-top: 18px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 20px; }
+
+.cards { list-style: none; margin: 16px 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: grid; gap: 4px; justify-items: start; }
+.stat-label { color: var(--text-secondary); font-size: .9rem; }
+.stat-value { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+
+/* tabel */
+.dt-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.dt-scroll:focus-visible { outline: 3px solid var(--focus-ring); }
+.admin table { border-collapse: collapse; width: 100%; font-size: .93rem; }
+.admin th, .admin td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.admin thead th { background: var(--surface-2); white-space: nowrap; position: sticky; top: 0; }
+.admin tbody tr:last-child > * { border-bottom: 0; }
+.admin tbody tr:hover > * { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+.admin .dt-first { font-weight: 500; }
+.admin td.num, .admin th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.dt-sort { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: inherit; cursor: pointer; }
+.dt-sort:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.dt-msg { text-align: center; color: var(--text-secondary); padding: 28px 12px; }
+.dt-err { color: var(--danger); }
+.dt-actions { white-space: nowrap; }
+.dt-pager { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 2px; color: var(--text-secondary); font-size: .93rem; }
+
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-primary); white-space: nowrap; }
+.badge.ok { border-color: #2e7d32; color: #1b5e20; background: color-mix(in srgb, #2e7d32 12%, var(--surface)); }
+.badge.warn { border-color: #b26a00; color: #7a4a00; background: color-mix(in srgb, #ff9800 16%, var(--surface)); }
+.badge.info { border-color: var(--accent); color: var(--text-primary); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+[data-theme="gelap"] .badge.ok, [data-theme="senja"] .badge.ok { color: #a5d6a7; }
+[data-theme="gelap"] .badge.warn, [data-theme="senja"] .badge.warn { color: #ffcc80; }
+
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; }
+.kv dt { color: var(--text-secondary); }
+.kv dd { margin: 0; }
+.savebar { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 -6px 18px rgba(0,0,0,.06); }
+.admin .banner { margin: 10px 0; }
+.admin .banner ul { margin: 6px 0 0; padding-left: 18px; }
+.admin code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: .88em; }
+.admin progress { vertical-align: middle; }
+
+@media (max-width: 860px) {
+  .admin-body { grid-template-columns: minmax(0, 1fr); }
+  .admin-nav { position: static; min-height: 0; border-right: 0; border-bottom: 1px solid var(--border); padding: 8px; }
+  .admin-nav ul { display: flex; overflow-x: auto; gap: 6px; }
+  .admin-nav a { white-space: nowrap; }
+  .admin main { padding: 16px 14px 56px; }
+  .admin-top { padding: 8px 12px; flex-wrap: wrap; }
+  .kv { grid-template-columns: 1fr; }
+}
+
+.admin .nowrap { white-space: nowrap; }
+.admin .sortmark { color: var(--text-secondary); font-size: .85em; }

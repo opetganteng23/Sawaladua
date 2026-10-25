@@ -100,6 +100,7 @@ export async function generatePlan(
     timeHint: timeHint(prefs.greeting.utcOffsetMinutes),
     safetyInstruction: safetyInstruction(level),
     channel,
+    operatorNotes: ctx.settings.site().persona.extraInstructions,
   });
   log("info", { event: "context_built", requestId, retrieved: items.length, promptVersion: PROMPT_VERSION });
 

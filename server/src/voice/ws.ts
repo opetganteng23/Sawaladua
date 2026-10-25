@@ -41,7 +41,7 @@ export function attachVoice(server: Server, ctx: AppCtx) {
       const sess = token ? await ctx.d.c.sessions.findOne({ _id: sha(token), expiresAt: { $gt: new Date() } }) : null;
       const user = sess ? await ctx.d.c.users.findOne({ _id: sess.userId }) : null;
       if (!user) return reject(socket, 401, "Unauthorized");
-      if (user.deletionStatus !== "none" || !user.ageConfirmedAt) return reject(socket, 403, "Forbidden");
+      if (user.deletionStatus !== "none" || !user.ageConfirmedAt || user.status === "suspended") return reject(socket, 403, "Forbidden");
 
       const callId = oid(m[1]!);
       const call = callId ? await ctx.d.c.call_sessions.findOne({ _id: callId, userId: user._id, status: "active" }) : null;

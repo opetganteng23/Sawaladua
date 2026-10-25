@@ -83,3 +83,14 @@ Jika satu fitur bermasalah (mis. memori menyimpan hal yang salah, suara error, e
 ## 10. Sesi dicurigai dibajak
 
 Minta pengguna membuka Pengaturan > Sesi login > "Keluarkan semua perangkat lain". Untuk pencabutan massal oleh operator: `db.sessions.deleteMany({userId: ObjectId("...")})` (satu akun) atau seluruh koleksi (semua pengguna login ulang).
+
+## 11. Tindakan lewat dasbor admin
+
+| Situasi | Tindakan di `/admin` |
+|---|---|
+| Akun disalahgunakan | Pengguna > Kelola > **Tangguhkan** (sesi dan panggilan aktif diakhiri seketika) |
+| Kunci provider bocor | Provider AI > **Ganti** kunci (pemilik), cabut kunci lama di konsol vendor; periksa Log audit |
+| Biaya melonjak | Pengaturan situs > Batas penggunaan (anggaran token) atau Fitur > matikan fitur boros |
+| Perlu menutup layanan sementara | Pengaturan situs > Akses > **Mode pemeliharaan** (admin tetap bisa masuk) |
+| Dugaan akses admin tidak sah | Log audit (siapa, kapan, apa); turunkan peran admin yang dicurigai (pemilik); ganti `ADMIN_EMAILS`/`SESSION_SECRET` bila perlu |
+| Salah ganti provider | Provider AI > **Kembalikan ke konfigurasi server** per kemampuan |

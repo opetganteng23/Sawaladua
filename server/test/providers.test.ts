@@ -39,11 +39,11 @@ const lastJson = () => JSON.parse(last().body.toString());
 
 describe("konfigurasi provider", () => {
   it("setiap kemampuan dipilih independen dan divalidasi", () => {
-    expect(() => cfgWith({ LLM_PROVIDER: "anthropic" })).toThrow(/ANTHROPIC_API_KEY/);
-    expect(() => cfgWith({ LLM_PROVIDER: "openai", OPENAI_API_KEY: "k" })).toThrow(/OPENAI_MODEL/);
-    expect(() => cfgWith({ EMBEDDING_PROVIDER: "gemini" })).toThrow(/GEMINI/);
-    expect(() => cfgWith({ REALTIME_PROVIDER: "cascade" })).toThrow(/STT_PROVIDER/);
-    expect(() => cfgWith({ REALTIME_PROVIDER: "openai", OPENAI_API_KEY: "k" })).toThrow(/OPENAI_REALTIME_MODEL/);
+    expect(() => cfgWith({ LLM_PROVIDER: "anthropic" })).toThrow(/anthropic/i);
+    expect(() => cfgWith({ LLM_PROVIDER: "openai", OPENAI_API_KEY: "k" })).toThrow(/model LLM untuk openai/i);
+    expect(() => cfgWith({ EMBEDDING_PROVIDER: "gemini" })).toThrow(/gemini/i);
+    expect(() => cfgWith({ REALTIME_PROVIDER: "cascade" })).toThrow(/cascade.*STT/i);
+    expect(() => cfgWith({ REALTIME_PROVIDER: "openai", OPENAI_API_KEY: "k" })).toThrow(/openai.*realtime/i);
     // campuran vendor diizinkan: LLM Anthropic + embedding OpenAI + STT/TTS Gemini
     const mixed = cfgWith({ LLM_PROVIDER: "anthropic", ANTHROPIC_API_KEY: "a", ANTHROPIC_MODEL: "m", EMBEDDING_PROVIDER: "openai", OPENAI_API_KEY: "o", OPENAI_EMBEDDING_MODEL: "e", STT_PROVIDER: "gemini", GEMINI_API_KEY: "g", GEMINI_STT_MODEL: "s", REALTIME_PROVIDER: "cascade" });
     expect(makeLlm(mixed).name).toBe("anthropic");

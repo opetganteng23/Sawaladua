@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export function ChatComposer({ busy, onSend }: { busy: boolean; onSend: (text: string) => void }) {
+export function ChatComposer({ busy, onSend, disclaimer }: { busy: boolean; onSend: (text: string) => void; disclaimer?: string }) {
   const [text, setText] = useState("");
   const submit = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -20,7 +20,7 @@ export function ChatComposer({ busy, onSend }: { busy: boolean; onSend: (text: s
         />
         <button className="btn primary" type="submit" disabled={busy || !text.trim()} aria-label="Kirim pesan">Kirim</button>
       </form>
-      <p className="disclaimer">Sawala adalah AI, bisa salah, dan bukan pengganti bantuan profesional. Dalam keadaan darurat, hubungi layanan darurat setempat.</p>
+      <p className="disclaimer">{disclaimer ?? "Sawala adalah AI, bisa salah, dan bukan pengganti bantuan profesional. Dalam keadaan darurat, hubungi layanan darurat setempat."}</p>
     </div>
   );
 }

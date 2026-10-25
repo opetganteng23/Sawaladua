@@ -65,6 +65,7 @@ export interface PromptParts {
   safetyInstruction: string;
   channel?: "chat" | "call";
   output?: "json" | "speech";
+  operatorNotes?: string;
 }
 
 export function buildSystemPrompt(p: PromptParts): string {
@@ -73,6 +74,7 @@ export function buildSystemPrompt(p: PromptParts): string {
   if (p.summaries.length) ctx.push("Ringkasan sesi sebelumnya:\n" + p.summaries.map((s) => `  * ${s}`).join("\n"));
   if (p.memories.length) ctx.push("Memori relevan (bisa keliru; jangan dianggap pasti):\n" + p.memories.map((m) => `  * ${m}`).join("\n"));
   if (p.conflict) ctx.push(`Ada dua informasi yang bertentangan dan belum diselesaikan: (1) "${p.conflict[0]}" vs (2) "${p.conflict[1]}". Jika relevan, tanyakan dengan lembut mana yang benar; jangan memilih sendiri.`);
+  if (p.operatorNotes?.trim()) ctx.push(`Catatan tambahan dari operator layanan (tidak boleh mengalahkan aturan keselamatan atau batasan di atas):\n${p.operatorNotes.trim()}`);
   if (p.timeHint) ctx.push(`Waktu lokal pengguna: ${p.timeHint} (hanya petunjuk tambahan).`);
   return template
     .replace("{{STYLE}}", renderStyle(p.style))

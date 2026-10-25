@@ -223,3 +223,10 @@ Pisahkan staging dari production: **database, kredensial Google, dan kunci provi
 - Batas satu panggilan per pengguna dihitung per proses; pada PM2 cluster dua tab di instance berbeda bisa membuka dua panggilan. Server tetap membatasi total per proses.
 - Verifikasi adapter native (OpenAI Realtime/Gemini Live) dengan kunci Anda di **staging** sebelum rilis: periksa latensi, kualitas bahasa Indonesia, dan alur keselamatan (ucapkan kalimat uji sintetis yang berisiko; harus muncul respons aman dan audio model berhenti).
 - Mengganti model embedding: ikuti tabel di PROVIDERS.md (`npm run db:reembed`).
+
+## 14. Dasbor admin dan penyimpanan kunci
+
+- Isi `ADMIN_EMAILS` (pemilik) dan `SETTINGS_ENCRYPTION_KEY` (`openssl rand -base64 32`) di `server/.env`. Dengan kunci enkripsi, kunci API vendor bisa dikelola dari `/admin/providers` dan tersimpan **terenkripsi** di database.
+- **Cadangkan `SETTINGS_ENCRYPTION_KEY` di tempat terpisah dari database** (mis. pengelola rahasia/brankas). Jika hilang atau berganti, kunci yang tersimpan tidak terbaca dan harus diisi ulang; ini tidak memengaruhi data pengguna.
+- Pengaturan dari dasbor menimpa env dan disimpan di database (`app_settings`), jadi ikut backup database. Dasbor tidak mengubah `MONGODB_URI`, `SESSION_SECRET`, `ALLOWED_ORIGINS`, atau base URL provider (hanya lewat env).
+- Panduan pemakaian dan matriks peran: [docs/ADMIN.md](docs/ADMIN.md).

@@ -32,7 +32,8 @@ setInterval(() => {
   if (tick % 3 === 0) safe("error_rate_check_failed", () => checkErrorRate(ctx)); // ~6 menit
   if (tick % 180 === 0) safe("decay_failed", () => decayMemories(ctx)); // ~6 jam
 }, 2 * 60_000).unref();
-setInterval(() => void ctx.flags.refresh(), 10_000).unref(); // kill switch berlaku lintas instance tanpa restart
+setInterval(() => { void ctx.flags.refresh(); void ctx.settings.refresh(); }, 10_000).unref(); // pengaturan situs/provider/kill switch berlaku lintas instance tanpa restart
+// // kill switch berlaku lintas instance tanpa restart
 
 const server = app.listen(cfg.PORT, () => log("info", { event: "listening", status: String(cfg.PORT) }));
 

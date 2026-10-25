@@ -9,9 +9,14 @@ export interface Preferences {
   greeting: { enabled: boolean; quietStartHour: number; quietEndHour: number; utcOffsetMinutes: number };
 }
 export interface Privacy { longTermMemory: boolean; allowSensitiveMemory: boolean; saveHistory: boolean }
-export interface User { id: string; email: string; displayName: string; isAdmin?: boolean; preferences: Preferences; privacySettings: Privacy; onboardingDone: boolean; ageConfirmed: boolean }
+export interface User { id: string; email: string; displayName: string; isAdmin?: boolean; adminRole?: "owner" | "admin" | null; preferences: Preferences; privacySettings: Privacy; onboardingDone: boolean; ageConfirmed: boolean }
+export interface SiteInfo {
+  name: string; tagline: string; supportEmail: string; defaultTheme: Theme;
+  ui: { emptyLines: string[]; disclaimer: string };
+  registrationOpen: boolean; maintenance: { enabled: boolean; message: string }; legal: { privacy: boolean; terms: boolean };
+}
 export interface Features { longTermMemory: boolean; moodThemes: boolean; proactiveGreeting: boolean; voiceCalls: boolean; dataExport: boolean; realtimeVoice?: boolean; realtimeMode?: "native" | "cascade" | null; realtimeProvider?: string }
-export interface SessionInfo { user: User | null; features: Features; auth: { google: boolean; clientId: string | null; dev: boolean } }
+export interface SessionInfo { user: User | null; features: Features; site?: SiteInfo; auth: { google: boolean; clientId: string | null; dev: boolean } }
 export interface Conversation { id: string; title: string; updatedAt: string; ephemeral: boolean }
 export interface Msg { id: string; role: "user" | "assistant"; text: string; bubbles: string[]; status: string; mood: Mood | null; createdAt: string }
 export interface Memory {
@@ -21,8 +26,9 @@ export interface Memory {
 export interface SimilarHit { conversationId: string; title: string; snippet: string; score: number }
 export interface SearchHit { conversationId: string; title: string; messageId: string | null; snippet: string; createdAt: string }
 
+export interface FieldError { path: string; message: string }
 export class ApiFail extends Error {
-  constructor(public status: number, public code: string, message: string, public retryable = false) { super(message); }
+  constructor(public status: number, public code: string, message: string, public retryable = false, public fields: FieldError[] = []) { super(message); }
 }
 
 const H = { "Content-Type": "application/json", "X-Requested-With": "sawala" };
@@ -36,8 +42,8 @@ export async function api<T = unknown>(method: string, url: string, body?: unkno
   }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const e = (data as { error?: { code: string; message: string; retryable: boolean } } | null)?.error;
-    throw new ApiFail(res.status, e?.code ?? "ERROR", e?.message ?? "Terjadi kesalahan.", e?.retryable ?? false);
+    const e = (data as { error?: { code: string; message: string; retryable: boolean; fields?: FieldError[] } } | null)?.error;
+    throw new ApiFail(res.status, e?.code ?? "ERROR", e?.message ?? "Terjadi kesalahan.", e?.retryable ?? false, e?.fields ?? []);
   }
   return data as T;
 }

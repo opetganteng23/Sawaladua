@@ -97,7 +97,7 @@ export class VoiceRelay {
     }
     return buildSystemPrompt({
       style: user.preferences.style, mood: "hangat", memories, summaries, conflict: null,
-      timeHint: null, safetyInstruction: safetyInstruction(0), channel: "call", output: "speech",
+      timeHint: null, safetyInstruction: safetyInstruction(0), channel: "call", output: "speech", operatorNotes: ctx.settings.site().persona.extraInstructions,
     });
   }
 

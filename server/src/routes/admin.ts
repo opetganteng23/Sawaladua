@@ -1,7 +1,8 @@
+import type { UserDoc } from "../db.js";
 import { Router } from "express";
 import { z } from "zod";
 import type { AppCtx } from "../context.js";
-import { adminSet } from "../auth/index.js";
+import { adminRoleOf, audit } from "../lib/adminAuth.js";
 import { FLAG_NAMES, type FlagName } from "../lib/flags.js";
 import { ApiError, wrap } from "../lib/http.js";
 
@@ -17,14 +18,13 @@ const pct = (arr: number[], p: number) => {
  */
 export function adminRouter(ctx: AppCtx) {
   const r = Router();
-  const admins = adminSet(ctx);
-  const requireAdmin = (email: string) => {
+  const requireAdmin = (u: UserDoc) => {
     // 404 (bukan 403) agar keberadaan endpoint tidak terungkap ke non-admin.
-    if (!admins.has(email.toLowerCase())) throw new ApiError(404, "NOT_FOUND", "Tidak ditemukan.");
+    if (!adminRoleOf(ctx, u)) throw new ApiError(404, "NOT_FOUND", "Tidak ditemukan.");
   };
 
   r.get("/admin/usage", wrap(async (req, res) => {
-    requireAdmin(req.user!.email);
+    requireAdmin(req.user!);
     const { days } = z.object({ days: z.coerce.number().int().min(1).max(90).default(7) }).parse(req.query);
     const since = new Date(Date.now() - days * 864e5);
     const rows = await ctx.d.c.usage_events
@@ -79,15 +79,17 @@ export function adminRouter(ctx: AppCtx) {
   const flagsView = () => ({ effective: ctx.flags.get(), killed: ctx.flags.killed(), names: FLAG_NAMES });
 
   r.get("/admin/flags", wrap(async (req, res) => {
-    requireAdmin(req.user!.email);
+    requireAdmin(req.user!);
     res.json(flagsView());
   }));
 
   // Kill switch runtime: hanya bisa MEMATIKAN fitur yang menyala di environment (tanpa restart; lintas instance dalam ~10 dtk).
   r.patch("/admin/flags", wrap(async (req, res) => {
-    requireAdmin(req.user!.email);
+    requireAdmin(req.user!);
     const body = z.object({ killed: z.array(z.enum(FLAG_NAMES)).max(FLAG_NAMES.length) }).strict().parse(req.body);
+    const before = ctx.flags.killed();
     await ctx.flags.setKilled([...new Set(body.killed)] as FlagName[]);
+    await audit(ctx, req, "flags.update", "flags", { before, after: ctx.flags.killed() });
     res.json(flagsView());
   }));
 

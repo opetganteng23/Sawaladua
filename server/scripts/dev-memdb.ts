@@ -1,4 +1,5 @@
 // Dev tanpa instalasi database: MongoDB in-memory (data hilang saat berhenti). Hanya untuk data uji.
+import { randomBytes } from "node:crypto";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
 const mongod = await MongoMemoryServer.create();
@@ -10,5 +11,6 @@ for (const f of ["FEATURE_LONG_TERM_MEMORY", "FEATURE_MOOD_THEMES", "FEATURE_PRO
 process.env.REALTIME_PROVIDER ??= "mock";
 process.env.STT_PROVIDER ??= "mock";
 process.env.TTS_PROVIDER ??= "mock";
+process.env.SETTINGS_ENCRYPTION_KEY ??= randomBytes(32).toString("base64"); // hanya dev: agar penyimpanan kunci lewat dasbor bisa dicoba
 console.log("MongoDB in-memory:", process.env.MONGODB_URI);
 await import("../src/index.js");

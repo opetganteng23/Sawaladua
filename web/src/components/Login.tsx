@@ -8,6 +8,7 @@ declare global {
 }
 
 export function Login({ info, onLogin }: { info: SessionInfo; onLogin: (u: User) => void }) {
+  const site = info.site;
   const btn = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState("");
   const [email, setEmail] = useState("");
@@ -48,11 +49,12 @@ export function Login({ info, onLogin }: { info: SessionInfo; onLogin: (u: User)
   return (
     <main className="center">
       <div className="card stack">
-        <h1>Sawala</h1>
+        <h1>{site?.name ?? "Sawala"}</h1>
         <p>
-          Teman ngobrol berbasis AI untuk bercerita dan menyusun pikiran. Sawala adalah AI, bukan manusia, dan bukan
+          {site?.tagline ? `${site.tagline}. ` : "Teman ngobrol berbasis AI untuk bercerita dan menyusun pikiran. "}{site?.name ?? "Sawala"} adalah AI, bukan manusia, dan bukan
           pengganti psikolog, dokter, atau layanan darurat.
         </p>
+        {site && !site.registrationOpen && <p className="muted">Pendaftaran sedang ditutup. Hanya pengguna terdaftar atau yang diundang yang bisa masuk.</p>}
         {info.auth.google ? <div ref={btn} /> : <p className="muted">Login Google belum dikonfigurasi di server ini.</p>}
         {info.auth.dev && (
           <form onSubmit={dev} className="stack" aria-label="Login pengembangan">
@@ -65,6 +67,7 @@ export function Login({ info, onLogin }: { info: SessionInfo; onLogin: (u: User)
           </form>
         )}
         <div role="alert" style={{ color: "var(--danger)" }}>{err}</div>
+        {site?.supportEmail && <p className="muted">Bantuan: <a href={`mailto:${site.supportEmail}`}>{site.supportEmail}</a></p>}
       </div>
     </main>
   );

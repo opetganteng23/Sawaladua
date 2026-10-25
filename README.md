@@ -36,6 +36,10 @@ Buka http://localhost:5173, masuk lewat form "Masuk (dev)", centang konfirmasi 1
 | `npm -w server run eval` | Evaluasi kualitas AI (`server/eval/quality.cases.json`) terhadap provider yang dikonfigurasi. Hasil otomatis hanya penyaring kasar; **butuh tinjauan manusia** |
 | `node server/scripts/loadtest.mjs <url> <users> <msgs>` | Uji beban sederhana (baseline di [docs/PHASE4_WRAPPERS.md](docs/PHASE4_WRAPPERS.md)) |
 
+## Dasbor admin
+
+`/admin` untuk pemilik (`ADMIN_EMAILS`) dan admin: kelola **pengguna** (tabel, tangguhkan, peran, hapus), **undangan**, **provider AI dan kunci API** (ganti saat runtime, terenkripsi), **pengaturan situs** (nama, teks, aturan akses, batas, biaya, halaman hukum, mode pemeliharaan), **kill switch fitur**, **metrik**, dan **log audit**. Semua berlaku tanpa restart dan tidak perlu hard-code. Panduan, matriks peran, dan catatan keamanan: [docs/ADMIN.md](docs/ADMIN.md).
+
 ## Status dan yang tersisa
 
 - **Cakupan MTS bab demi bab:** [docs/MTS_COVERAGE.md](docs/MTS_COVERAGE.md)

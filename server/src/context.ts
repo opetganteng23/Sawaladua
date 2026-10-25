@@ -1,6 +1,7 @@
 import type { Config } from "./config.js";
 import type { Database, UserDoc } from "./db.js";
 import type { FlagStore } from "./lib/flags.js";
+import type { SettingsStore } from "./lib/siteSettings.js";
 import type { Embedder, LlmProvider, SttProvider, TtsProvider } from "./llm/types.js";
 
 export interface AppCtx {
@@ -11,6 +12,7 @@ export interface AppCtx {
   stt: SttProvider | null;
   tts: TtsProvider | null;
   flags: FlagStore;
+  settings: SettingsStore;
 }
 
 declare module "express-serve-static-core" {

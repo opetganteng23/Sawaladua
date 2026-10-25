@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AdminView } from "./AdminView";
 import { CallView } from "./CallView";
 import { Onboarding } from "./Onboarding";
 import { Confirm, Overlay } from "./Overlay";
@@ -93,26 +92,5 @@ describe("CallView", () => {
     expect(screen.getByLabelText(/Boleh memotong Sawala/)).not.toBeChecked();
     expect(screen.getByRole("button", { name: "Mulai panggilan" })).toBeEnabled();
     delete (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
-  });
-});
-
-describe("AdminView", () => {
-  const usage = { days: 7, currency: "USD", costNote: "Harga belum dikonfigurasi", budget: { dailyGlobal: null, dailyPerUser: null }, daily: [{ date: "2026-10-24", requests: 10, ok: 9, failed: 1, errorRate: 0.1, inputTokens: 1000, outputTokens: 100, latencyP50Ms: 120, latencyP95Ms: 300, estimatedCost: null }], models: [{ model: "mock/mock-1", requests: 10, inputTokens: 1000, outputTokens: 100, estimatedCost: null }] };
-  const flags = { effective: { voiceCalls: true, dataExport: true }, killed: [] as string[], names: ["voiceCalls", "dataExport"] };
-
-  it("menampilkan metrik dan mengirim kill switch saat fitur dimatikan", async () => {
-    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url.startsWith("/api/admin/usage")) return json(usage);
-      if (url === "/api/admin/flags" && init?.method === "PATCH") return json({ ...flags, effective: { voiceCalls: false, dataExport: true }, killed: JSON.parse(init.body as string).killed });
-      return json(flags);
-    });
-    render(<AdminView />);
-    expect(await screen.findByRole("table", { name: "Penggunaan harian" })).toBeInTheDocument();
-    expect(screen.getByText("2026-10-24")).toBeInTheDocument();
-    expect(screen.getByText(/Harga belum dikonfigurasi/)).toBeInTheDocument();
-    await userEvent.click(await screen.findByLabelText(/Panggilan suara/));
-    await waitFor(() => expect(screen.getByText(/dimatikan operator/)).toBeInTheDocument());
-    const patch = fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "PATCH")!;
-    expect(JSON.parse((patch[1] as RequestInit).body as string)).toEqual({ killed: ["voiceCalls"] });
   });
 });

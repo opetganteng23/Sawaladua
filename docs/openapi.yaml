@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Sawala API
-  version: 0.5.0
+  version: 0.6.0
   description: |
     Kontrak API Sawala. Seluruh endpoint privat memakai cookie sesi `sawala_sid` (httpOnly) dan WAJIB mengirim header
     `X-Requested-With: sawala` pada permintaan non-GET (perlindungan CSRF) dari origin yang ada di `ALLOWED_ORIGINS`.
@@ -16,6 +16,7 @@ tags:
   - { name: account }
   - { name: voice }
   - { name: admin }
+  - { name: site }
 security:
   - cookieAuth: []
 paths:
@@ -294,6 +295,147 @@ paths:
       responses:
         "200": { description: OK }
         "404": { $ref: "#/components/responses/Error" }
+  /api/site:
+    get:
+      tags: [site]
+      summary: Pengaturan situs publik (nama, teks UI, status pendaftaran/pemeliharaan). Tanpa rahasia
+      security: []
+      responses:
+        "200": { description: OK }
+  /privasi.html:
+    get:
+      tags: [site]
+      summary: Halaman kebijakan privasi. Dari teks buatan admin (Pengaturan Situs) bila ada; selain itu halaman bawaan
+      security: []
+      responses:
+        "200": { description: HTML }
+  /ketentuan.html:
+    get:
+      tags: [site]
+      summary: Halaman ketentuan penggunaan (aturan sama dengan /privasi.html)
+      security: []
+      responses:
+        "200": { description: HTML }
+  /api/admin/users:
+    get:
+      tags: [admin]
+      summary: Daftar pengguna (tabel). Hanya metadata akun dan hitungan agregat, TANPA isi percakapan
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - { name: q, in: query, description: Cari email/nama, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string, enum: [createdAt, email, lastLoginAt] } }
+        - { name: dir, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { name: status, in: query, schema: { type: string, enum: [active, suspended] } }
+        - { name: role, in: query, schema: { type: string, enum: [owner, admin, user] } }
+      responses:
+        "200": { description: "{items, total, page, limit, pages}" }
+        "404": { $ref: "#/components/responses/Error" }
+  /api/admin/users/{id}:
+    get:
+      tags: [admin]
+      summary: Detail akun (metadata, hitungan, sesi aktif). Tanpa isi percakapan
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      tags: [admin]
+      summary: "Ubah status (active/suspended), peran (hanya pemilik), nama, catatan internal. Pemilik (ADMIN_EMAILS) dan akun sendiri dilindungi"
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: false, properties: { status: { type: string, enum: [active, suspended] }, role: { type: string, enum: [user, admin] }, displayName: { type: string }, note: { type: string, maxLength: 200 } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [admin]
+      summary: Hapus pengguna (menjalankan workflow penghapusan akun). Wajib konfirmasi email
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [confirmEmail], properties: { confirmEmail: { type: string } }, additionalProperties: false } } } }
+      responses:
+        "202": { description: Diterima (status penghapusan) }
+        "400": { $ref: "#/components/responses/Error" }
+  /api/admin/users/{id}/revoke-sessions:
+    post:
+      tags: [admin]
+      summary: Keluarkan pengguna dari semua perangkat
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: OK }
+  /api/admin/invites:
+    get:
+      tags: [admin]
+      summary: Daftar undangan (tabel)
+      responses:
+        "200": { description: "{items, total, page, limit, pages}" }
+    post:
+      tags: [admin]
+      summary: Undang email (memberi akses saat pendaftaran ditutup; peran admin hanya oleh pemilik)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string }, role: { type: string, enum: [user, admin] } }, additionalProperties: false } } } }
+      responses:
+        "201": { description: Dibuat }
+        "409": { $ref: "#/components/responses/Error" }
+  /api/admin/invites/{id}:
+    delete:
+      tags: [admin]
+      summary: Cabut undangan
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { description: OK }
+  /api/admin/settings:
+    get:
+      tags: [admin]
+      summary: Pengaturan situs lengkap + nilai efektif (dan sumbernya, db atau env) + bawaan
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [admin]
+      summary: Simpan pengaturan situs (validasi ketat per field; berlaku seketika tanpa restart)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [value], properties: { value: { type: object } }, additionalProperties: false } } } }
+      responses:
+        "200": { description: OK }
+        "400": { description: "INVALID_SETTINGS dengan daftar fields {path,message}" }
+  /api/admin/settings/reset:
+    post:
+      tags: [admin]
+      summary: Kembalikan satu bagian atau semua pengaturan ke bawaan
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [section], properties: { section: { type: string } }, additionalProperties: false } } } }
+      responses:
+        "200": { description: OK }
+  /api/admin/providers:
+    get:
+      tags: [admin]
+      summary: Provider AI per kemampuan, status kunci (dimask, tidak pernah utuh), enkripsi, embedding usang, status hitung ulang
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [admin]
+      summary: "Ganti provider/model/kunci (hanya PEMILIK). Kunci dienkripsi (AES-256-GCM). Ganti embedding butuh confirmEmbeddingChange=true"
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: false, properties: { providers: { type: object }, keys: { type: object, description: "{gemini|openai|anthropic: string|null}; null = hapus kunci DB (kembali ke env)" }, confirmEmbeddingChange: { type: boolean } } } } } }
+      responses:
+        "200": { description: OK }
+        "400": { description: INVALID_PROVIDERS atau ENCRYPTION_KEY_MISSING }
+        "409": { description: EMBEDDING_CHANGE_NEEDS_CONFIRM }
+  /api/admin/providers/test:
+    post:
+      tags: [admin]
+      summary: Uji koneksi provider dengan permintaan sintetis kecil (hanya pemilik). Galat provider tidak diteruskan apa adanya
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [capability], properties: { capability: { type: string, enum: [llm, embedding, stt, tts, realtime] } } } } } }
+      responses:
+        "200": { description: "{ok, ms, detail atau error}" }
+  /api/admin/reembed:
+    post:
+      tags: [admin]
+      summary: Hitung ulang embedding memori/ringkasan di latar belakang (hanya pemilik)
+      responses:
+        "202": { description: Dimulai }
+        "409": { description: Sudah berjalan }
+  /api/admin/audit:
+    get:
+      tags: [admin]
+      summary: Log audit tindakan admin (tabel; filter q dan action)
+      responses:
+        "200": { description: "{items, total, page, limit, pages}" }
 components:
   securitySchemes:
     cookieAuth: { type: apiKey, in: cookie, name: sawala_sid }

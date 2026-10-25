@@ -59,6 +59,8 @@ const schema = z.object({
   ANTHROPIC_BASE_URL: z.string().default("https://api.anthropic.com"),
   ANTHROPIC_MODEL: str,
 
+  // Kunci 32 byte (base64) untuk mengenkripsi kunci API yang disimpan lewat dasbor admin. Tanpa ini kunci hanya dari env.
+  SETTINGS_ENCRYPTION_KEY: str,
   EMBEDDING_DIMENSIONS: z.coerce.number().int().min(8).max(3072).default(256),
   STT_MAX_AUDIO_BYTES: z.coerce.number().int().min(10_000).max(10_000_000).default(2_000_000),
   MAX_MESSAGE_CHARS: z.coerce.number().int().default(4000),
@@ -101,30 +103,43 @@ const MODEL: Record<string, keyof Config> = {
   "tts:gemini": "GEMINI_TTS_MODEL", "tts:openai": "OPENAI_TTS_MODEL",
 };
 
-export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
-  const cfg = schema.parse(env);
-  const prod = cfg.NODE_ENV === "production" || cfg.NODE_ENV === "staging";
+export const isProdEnv = (cfg: Pick<Config, "NODE_ENV">) => cfg.NODE_ENV === "production" || cfg.NODE_ENV === "staging";
+
+/** Kumpulkan semua masalah konfigurasi provider (dipakai saat start dan saat admin mengubah provider lewat dasbor). */
+export function validateProviders(cfg: Config): string[] {
+  const errs: string[] = [];
+  const prod = isProdEnv(cfg);
   if (prod) {
-    if (cfg.AUTH_DEV_LOGIN) throw new Error("AUTH_DEV_LOGIN harus false di staging/production");
-    if (cfg.LLM_PROVIDER === "mock") throw new Error("LLM_PROVIDER=mock tidak boleh dipakai di staging/production");
-    if (cfg.EMBEDDING_PROVIDER === "mock") throw new Error("EMBEDDING_PROVIDER=mock tidak boleh dipakai di staging/production");
-    if (cfg.STT_PROVIDER === "mock" || cfg.TTS_PROVIDER === "mock") throw new Error("STT/TTS_PROVIDER=mock tidak boleh dipakai di staging/production");
-    if (!cfg.GOOGLE_CLIENT_ID) throw new Error("GOOGLE_CLIENT_ID wajib diisi");
+    if (cfg.LLM_PROVIDER === "mock") errs.push("LLM_PROVIDER=mock tidak boleh dipakai di staging/production");
+    if (cfg.EMBEDDING_PROVIDER === "mock") errs.push("EMBEDDING_PROVIDER=mock tidak boleh dipakai di staging/production");
+    if (cfg.STT_PROVIDER === "mock" || cfg.TTS_PROVIDER === "mock") errs.push("STT/TTS_PROVIDER=mock tidak boleh dipakai di staging/production");
+    if (cfg.REALTIME_PROVIDER === "mock") errs.push("REALTIME_PROVIDER=mock tidak boleh dipakai di staging/production");
   }
   const need = (cap: "llm" | "embedding" | "stt" | "tts", vendor: string) => {
     if (vendor === "mock" || vendor === "none") return;
     const v = vendor as Vendor;
     const keyName = KEY[v], modelName = MODEL[`${cap}:${v}`];
-    if (!modelName) throw new Error(`${vendor} tidak menyediakan ${cap} (anthropic: hanya LLM; embedding/STT/TTS pakai gemini atau openai)`);
-    if (!cfg[keyName] || !cfg[modelName]) throw new Error(`${String(keyName)} dan ${String(modelName)} wajib diisi untuk ${cap.toUpperCase()} dengan provider ${vendor}`);
+    if (!modelName) return void errs.push(`${vendor} tidak menyediakan ${cap} (anthropic: hanya LLM; embedding/STT/TTS pakai gemini atau openai)`);
+    if (!cfg[keyName]) errs.push(`Kunci API ${vendor} belum diisi (untuk ${cap.toUpperCase()})`);
+    if (!cfg[modelName]) errs.push(`Nama model ${cap.toUpperCase()} untuk ${vendor} belum diisi`);
   };
   need("llm", cfg.LLM_PROVIDER);
   need("embedding", cfg.EMBEDDING_PROVIDER);
   need("stt", cfg.STT_PROVIDER);
   need("tts", cfg.TTS_PROVIDER);
-  if (cfg.REALTIME_PROVIDER === "gemini" && (!cfg.GEMINI_API_KEY || !cfg.GEMINI_REALTIME_MODEL)) throw new Error("GEMINI_API_KEY dan GEMINI_REALTIME_MODEL wajib diisi untuk REALTIME_PROVIDER=gemini");
-  if (cfg.REALTIME_PROVIDER === "openai" && (!cfg.OPENAI_API_KEY || !cfg.OPENAI_REALTIME_MODEL)) throw new Error("OPENAI_API_KEY dan OPENAI_REALTIME_MODEL wajib diisi untuk REALTIME_PROVIDER=openai");
-  if (cfg.REALTIME_PROVIDER === "cascade" && cfg.STT_PROVIDER === "none") throw new Error("REALTIME_PROVIDER=cascade membutuhkan STT_PROVIDER (gemini/openai). TTS_PROVIDER opsional; tanpa TTS suara dibuat browser");
-  if (prod && cfg.REALTIME_PROVIDER === "mock") throw new Error("REALTIME_PROVIDER=mock tidak boleh dipakai di staging/production");
+  if (cfg.REALTIME_PROVIDER === "gemini" && (!cfg.GEMINI_API_KEY || !cfg.GEMINI_REALTIME_MODEL)) errs.push("Realtime gemini membutuhkan kunci Gemini dan nama model realtime");
+  if (cfg.REALTIME_PROVIDER === "openai" && (!cfg.OPENAI_API_KEY || !cfg.OPENAI_REALTIME_MODEL)) errs.push("Realtime openai membutuhkan kunci OpenAI dan nama model realtime");
+  if (cfg.REALTIME_PROVIDER === "cascade" && cfg.STT_PROVIDER === "none") errs.push("Realtime cascade membutuhkan STT (gemini/openai). TTS opsional; tanpa TTS suara dibuat browser");
+  return errs;
+}
+
+export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
+  const cfg = schema.parse(env);
+  if (isProdEnv(cfg)) {
+    if (cfg.AUTH_DEV_LOGIN) throw new Error("AUTH_DEV_LOGIN harus false di staging/production");
+    if (!cfg.GOOGLE_CLIENT_ID) throw new Error("GOOGLE_CLIENT_ID wajib diisi");
+  }
+  const errs = validateProviders(cfg);
+  if (errs.length) throw new Error(errs[0]);
   return cfg;
 }

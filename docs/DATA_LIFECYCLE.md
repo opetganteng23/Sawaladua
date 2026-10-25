@@ -19,6 +19,9 @@ Setiap kategori data: tujuan, dasar/mekanisme persetujuan, retensi, siapa yang b
 | Kejadian operasional (`ops_events`): jenis kejadian dan durasi, **tanpa isi dan tanpa ID pengguna** | Pemantauan kualitas | Kepentingan operasional | 30 hari | Operator | MongoDB | Kedaluwarsa otomatis |
 | Log aplikasi: ID request, status, durasi, kode error | Debugging | Kepentingan operasional | Rotasi 14 hari (PM2) | Operator | Disk server | Rotasi log |
 | Job penghapusan (`deletion_jobs`): langkah dan status, tanpa isi | Bukti dan pemulihan penghapusan | Kewajiban operasional | 30 hari setelah selesai | Operator | MongoDB | Kedaluwarsa otomatis |
+| Undangan (email, peran, siapa yang mengundang) | Memberi akses saat pendaftaran ditutup | Tindakan admin | Sampai dicabut atau akun dihapus (undangan terpakai tetap sebagai catatan) | Admin | MongoDB | Cabut undangan |
+| Log audit tindakan admin (email admin, tindakan, sasaran, IP admin, tanpa isi percakapan/rahasia) | Akuntabilitas dan keamanan | Kepentingan operasional | 365 hari | Admin | MongoDB | Kedaluwarsa otomatis |
+| Pengaturan situs dan provider (kunci API **terenkripsi**) | Konfigurasi layanan | Tindakan admin/pemilik | Sampai diubah | Pemilik/admin (kunci tidak pernah ditampilkan utuh) | MongoDB (`app_settings`) | Hapus kunci dari dasbor |
 | Backup database | Pemulihan bencana | Kepentingan operasional | [mis. 7-30 hari; tentukan] | Operator terbatas | Atlas/[lokasi] | Mengikuti siklus retensi backup; **data terhapus bisa bertahan di backup sampai siklus berakhir** |
 
 ## Pihak ketiga yang menerima data
